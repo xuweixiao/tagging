@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link href="lib/assets/css/bootstrap.css" type="text/css" rel="stylesheet">
+    <link href="lib/layui/dist/css/layui.css" type="text/css" rel="stylesheet">
+    <link href="lib/assets/css/index.css" type="text/css" rel="stylesheet">
+    <link href="lib/css/loaders.css" type="text/css" rel="stylesheet">
+    <link href="lib/css/lanrenzhijia.css" type="text/css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+</head>
+<body>
+<div class="main clearfix">
+    <header class="header">
+    </header>
+    <div class="col-xs-3 left_table maxHeight">
+        <div class="col-xs-12 left_top">
+            <div style="height: calc(100% - 35px);overflow-y: auto;">
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th>状态</th>
+                        <th>名称</th>
+                    </tr>
+                    </thead>
+                    <tbody id="leftUsersbody">
+                    </tbody>
+                </table>
+            </div>
+            <div id="page" class="pageBottom"></div>
+        </div>
+        <div class="col-xs-12 left_bottom">
+            <div style="height: calc(100% - 35px);overflow-y: auto;">
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th>状态</th>
+                        <th>名称</th>
+                    </tr>
+                    </thead>
+                    <tbody id="leftMarkbody">
+                    </tbody>
+                </table>
+                <div id="noMarkpage" class="pageBottom"></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xs-6 maxHeight" style="background-color: #f2f7f2">
+        <div class="center_img_div">
+            <div class="col-xs-12" style="padding: 0 10px 8px 10px;margin-bottom: 10px;border-bottom: 1px solid #eee">
+                <label id="imgName"></label>
+                <div style="float: right;">
+                    <div class="slide_rotate_div">
+                        <i class="slide_img slide_xuan" onclick="slideRotate('topImg')"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="center_img">
+                <img src="./img/p.jpg" draggable="false" class="c_img" id="topImg" rotate="0">
+                <div class="biaoDiv"></div>
+            </div>
+            <div class="col-xs-12" id="saveBtn">
+                <div style="float: right;margin-right: 10px;">
+                    <div class="btn_base" onclick="save()" style="width: 100px;height: 35px;line-height: 35px;">
+                        保存
+                    </div>
+                </div>
+            </div>
+            <div class="loaders">
+                <div class="loader-inner line-spin-fade-loader">
+                    <div></div>
+                    <div></div>
+                    <div></div>
+                    <div></div>
+                    <div></div>
+                    <div></div>
+                    <div></div>
+                    <div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xs-3 maxHeight" id="rightScroll" style="padding-left: 0;">
+        <div class="col-xs-12">
+            <table class="table">
+                <thead>
+                <tr>
+                    <th>宽</th>
+                    <th>高</th>
+                    <th>X轴</th>
+                    <th>Y轴</th>
+                </tr>
+                </thead>
+                <tbody id="rightContentbody">
+                </tbody>
+            </table>
+            <!--分页-->
+        </div>
+    </div>
+</div>
+<div class="loader" style="display: none">
+    <div class="loader-inner line-scale-pulse-out-rapid">
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+    </div>
+</div>
+<script src="lib/jquery/jquery-3.0.0.min.js"></script>
+<script src="lib/layui/dist/layui.js"></script>
+<script>
+    var showImgHeight = 600, xli = null, yli = null;
+    var layer;
+    $(document).ready(function () {
+        var img = new Image()
+        img.src = $('#topImg').attr('src')
+        img.onload = function () {
+            xli = deletePx($('#topImg').css('width')) / img.width
+            yli = deletePx($('#topImg').css('height')) / img.height
+            console.log("图片加载完成",xli,yli)
+        }
+    })
+    layui.use('layer', function () {
+        layer = layui.layer;
+    })
+    function getMaxHeight() {
+        var height = $(window).outerHeight() - $('.header').outerHeight();
+        $('.maxHeight').css("height", height + "px");
+        showImgHeight = height - $('.center_img_div').find('.col-xs-12').outerHeight() - $('#saveBtn').outerHeight() - 30;
+    }
+    getMaxHeight();
+    $(window).resize(function () {
+        getMaxHeight()
+    })
+    function slideRotate(imgid) {
+        if ($('#' + imgid).attr('rotate') == 0) {
+            $('#' + imgid).attr('rotate', 1)
+            var str = "rotate(180deg)";
+            $('#' + imgid).css("transform", str);
+            $('.biaoDiv').css("transform", str);
+        } else {
+            $('#' + imgid).attr('rotate', 0)
+            var str = "rotate(0deg)";
+            $('#' + imgid).css("transform", str);
+            $('.biaoDiv').css("transform", str);
+        }
+    }
+    function http(obj) {
+        $('.loader').show();
+        $.ajax({
+            url: obj.url,
+            type: obj.type,
+            dataType: 'json',
+            data: obj.data,
+            success: function (result) {
+                $('.loader').hide();
+                obj.success(result);
+                if (result.status == -1) {
+                    layui.use('layer', function () {
+                        layer = layui.layer;
+                        layer.msg(result.msg);
+                    })
+                }
+            },
+            error: function (result) {
+                $('.loader').hide();
+                obj.error(result);
+                layui.use('layer', function () {
+                    layer = layui.layer;
+                    layer.msg(result.msg);
+                })
+            }
+        })
+    }
+    /**
+     * 鼠标点击位置记录，拖动画框，离开结束
+     */
+    var isStartPaint = false, isFirstMove = true;
+    var rectangleArr = [];
+    var rectangleId = 0;
+    var x = 0, y = 0;
+    var curRectangle = 0;
+    /**
+     * 绑定鼠标画矩形事件
+     */
+    function painting() {
+        //在绑定之前先解绑，解决了事件多次触发的问题。
+        $(document).off('mousedown', '.biaoDiv').on('mousedown', '.biaoDiv', function (event) {
+            x = event.pageX - $('#topImg').offset().left
+            y = event.pageY - $('#topImg').offset().top
+            x = x.toFixed(2)
+            y = y.toFixed(2)
+            isStartPaint = true;
+            if (rectangleArr.length == 0) {
+                rectangleArr.push(0)
+            } else {
+                rectangleArr.push((rectangleArr[rectangleArr.length - 1] + 1));
+            }
+            rectangleId = rectangleArr[rectangleArr.length - 1]
+            console.log(rectangleId)
+        })
+        $(document).off('mousemove', '.biaoDiv').on('mousemove', '.biaoDiv', function (event) {
+            if (isStartPaint) {
+                if (isFirstMove) {
+                    var rectangleView = "<div id='" + rectangleId + "' class='line' x='" + x + "' y='" + y + "' style='left: " + x + "px;top:" + y + "px'><img draggable='false' class='change_size'><div class='glyphicon glyphicon-remove delete_line'></div></div>";
+                    $('.biaoDiv').append(rectangleView);
+                    isFirstMove = false;
+                    console.log(rectangleId + "first")
+                    $("#rightContentbody").append('<tr id="' + rectangleId + '"><td></td><td></td><td>' + (x * xli).toFixed(2) + '</td><td>' + (y * yli).toFixed(2) + '</td></tr>')
+                    $('#rightContentbody tr').each(function () {
+                        $(this).click(function () {
+                            $(this).siblings().removeClass('table_selected')
+                            $(this).addClass('table_selected');
+                            var id = $(this).attr('id');
+                            $('.biaoDiv .line').removeClass('line_select');
+                            $('.biaoDiv #' + id).addClass('line_select');
+                            //滚动效果
+                            var scrollTop = $('.center_img').scrollTop();
+                            var dotop = $('.biaoDiv #' + id).offset().top;
+                            hei = $('.center_img').offset().top;
+                            $('.center_img').animate({
+                                scrollTop: scrollTop + dotop - hei - 50
+                            }, 500);
+                        })
+                    })
+                }
+                var width = event.pageX - $('#topImg').offset().left - x
+                var height = event.pageY - $('#topImg').offset().top - y
+                $('#rightContentbody #' + rectangleId + " td").eq(0).html((width * xli).toFixed(2))
+                $('#rightContentbody #' + rectangleId + " td").eq(1).html((height * yli).toFixed(2))
+                width = width.toFixed(2)
+                height = height.toFixed(2)
+                $('#' + rectangleId).css({"width": width + 'px', "height": height + 'px'});
+                $('#' + rectangleId).attr("w", width)
+                $('#' + rectangleId).attr("h", height)
+            }
+        })
+        $(document).off('mouseup', '.biaoDiv').on('mouseup', '.biaoDiv', function (event) {
+//            rectangleId = rectangleId + 1;
+            isStartPaint = false;
+            isFirstMove = true;
+            console.log("图片-----up")
+        })
+    }
+    /**
+     * 解除鼠标画矩形事件
+     */
+    function offPainting() {
+        isStartPaint = false;
+        isFirstMove = true;
+        x = 0;
+        y = 0;
+        $(document).off('mousedown', '.biaoDiv')
+        $(document).off('mousemove', '.biaoDiv')
+        $(document).off('mouseup', '.biaoDiv')
+    }
+
+    $(document).on('mouseenter', '.biaoDiv', function () {
+//        console.log("图片---enter")
+        painting()
+    })
+    $(document).on('click', '.biaoDiv .line .delete_line', function () {
+        var id = $(this).parent().attr('id')
+        id = parseInt(id)
+        console.log("line---delete")
+        rectangleArr.splice($.inArray(id, rectangleArr), 1)
+        $('#rightContentbody #' + id).remove()
+        console.log(rectangleArr)
+        $(this).parent().remove()
+    })
+    $(document).on('mouseenter', '.biaoDiv .line .change_size', function (event) {
+        event.stopPropagation()
+//        console.log("size---change")
+    })
+    $(document).on('mousedown', '.biaoDiv .line .change_size', function (event) {
+        event.stopPropagation()
+        console.log("size---down")
+        x = $(this).parent().attr('x')
+        y = $(this).parent().attr('y')
+        var id = $(this).parent().attr('id')
+        changeSize(id)
+    })
+    $(document).on('mouseup', '.biaoDiv .line .change_size', function (event) {
+//        console.log("size---leave")
+        offPainting()
+    })
+    $(document).on('mouseenter', '.biaoDiv .line', function () {
+//        console.log("line---enter")
+        curRectangle = $(this).attr('id')
+        $(this).find('.change_size').css("display", "block");
+        $(this).siblings().find('.change_size').css("display", "none");
+        $(this).find('.delete_line').css("display", "block");
+        $(this).siblings().find('.delete_line').css("display", "none");
+    })
+    $(document).on('mousedown', '.biaoDiv .line', function (event) {
+        //阻止子元素向父元素传递这个事件
+        event.stopPropagation()
+//        console.log("line---down")
+        $(this).addClass('line_select')
+        $(this).siblings().removeClass('line_select')
+        curRectangle = $(this).attr('id')
+        $('#rightContentbody tr').removeClass('table_selected')
+        $('#rightContentbody #' + curRectangle).addClass('table_selected')
+        //滚动效果
+        var scrollTop = $('#rightScroll').scrollTop();
+        var dotop = $('#rightContentbody #' + curRectangle).offset().top;
+        hei = $('#rightScroll').offset().top;
+        $('#rightScroll').animate({
+            scrollTop: scrollTop + dotop - hei - 50
+        }, 500);
+        offPainting()
+    })
+    $(document).on('mouseleave', '.biaoDiv .line', function () {
+//        console.log("line---leave")
+        $(this).find('.change_size').css("display", "none");
+        $(this).siblings().find('.change_size').css("display", "none");
+        $(this).find('.delete_line').css("display", "none");
+        $(this).siblings().find('.delete_line').css("display", "none");
+        painting()
+    })
+    //快捷键控制移动
+    $(document).keydown(function (event) {
+        var keyNum = event.which
+        var item = $('#' + curRectangle)
+        switch (keyNum) {
+            case 37:
+                item.animate({left: '-=2'}, 0)
+                refreshTableData(curRectangle)
+                break;
+            case 38:
+                $('.center_img').css('overflow', 'hidden')
+                item.animate({top: '-=2'}, 0)
+                refreshTableData(curRectangle)
+                break;
+            case 39:
+                item.animate({left: '+=2'}, 0)
+                refreshTableData(curRectangle)
+                break;
+            case 40:
+                $('.center_img').css('overflow', 'hidden')
+                item.animate({top: '+=2'}, 0)
+                refreshTableData(curRectangle)
+                break;
+            default: {
+                break;
+            }
+        }
+        $('.center_img').css('overflow', 'auto')
+    })
+    /**
+     * 改变大小
+     */
+    function changeSize(id) {
+        $(document).off('mousemove', '.biaoDiv').on('mousemove', '.biaoDiv', function (event) {
+            var width = event.pageX - $('#topImg').offset().left - x
+            var height = event.pageY - $('#topImg').offset().top - y
+            width = width.toFixed(2)
+            height = height.toFixed(2)
+            $('.biaoDiv #' + id).css({"width": width + 'px', "height": height + 'px'});
+            refreshTableData(id)
+        })
+        $(document).off('mouseup', '.biaoDiv').on('mouseup', '.biaoDiv', function (event) {
+            isStartPaint = false;
+            isFirstMove = true;
+            console.log("图片size-----up")
+        })
+    }
+    function refreshTableData(id) {
+        var td0 = $('#rightContentbody #' + id + " td").eq(0)
+        var td1 = $('#rightContentbody #' + id + " td").eq(1)
+        var td2 = $('#rightContentbody #' + id + " td").eq(2)
+        var td3 = $('#rightContentbody #' + id + " td").eq(3)
+        var rec_x = deletePx($('.biaoDiv #' + id).css('left'))
+        var rec_y = deletePx($('.biaoDiv #' + id).css('top'))
+        var rec_w = deletePx($('.biaoDiv #' + id).css('width'))
+        var rec_h = deletePx($('.biaoDiv #' + id).css('height'))
+        rec_x = (rec_x * xli).toFixed(2)
+        rec_y = (rec_y * yli).toFixed(2)
+        rec_w = (rec_w * xli).toFixed(2)
+        rec_h = (rec_h * yli).toFixed(2)
+        td0.html(rec_w)
+        td1.html(rec_h)
+        td2.html(rec_x)
+        td3.html(rec_y)
+    }
+    function deletePx(str) {
+        var ret = 0;
+        if (typeof (str) == 'undefined' || str == null || str.length == 0) {
+            ret = 0;
+        } else {
+            ret = str.substring(0, str.indexOf('px'))
+        }
+        return ret;
+    }
+    function save() {
+        var url = base_url + "markocr/update"
+        var json = [];
+        $('#rightContentbody tr').each(function (index) {
+            var w = $(this).children('td').eq(0).html()
+            var h = $(this).children('td').eq(1).html()
+            var x = $(this).children('td').eq(2).html()
+            var y = $(this).children('td').eq(3).html()
+            var obj = {}
+            obj.number = index
+            obj.x = x
+            obj.y = y
+            obj.width = w
+            obj.height = h
+            json.push(obj)
+        })
+        if (json.length === 0) {
+            alert("数据为空不能保存")
+            return
+        }
+        json = JSON.stringify(json)
+    }
+</script>
+</body>
+</html>

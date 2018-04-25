@@ -1,0 +1,2 @@
+1.禁止html点击图片，会打开图片地址在新的窗口
+    解决方法：<img src="./img/image_00018.jpg" draggable="false" class="c_img" id="topImg" rotate="0">

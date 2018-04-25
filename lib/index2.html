@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link href="lib/assets/css/bootstrap.css" type="text/css" rel="stylesheet">
+    <link href="lib/layui/dist/css/layui.css" type="text/css" rel="stylesheet">
+    <link href="lib/assets/css/index.css" type="text/css" rel="stylesheet">
+    <link href="lib/css/loaders.css" type="text/css" rel="stylesheet">
+    <link href="lib/css/lanrenzhijia.css" type="text/css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <style>
+        .col-xs-3{width: 20%}
+        .col-xs-6{width: 60%}
+        .col-xs-12{padding: 0}
+        .left_table .col-xs-12{padding: 0 15px 0 0;}
+        .left_table{padding-right: 0}
+        .left_table .btn_base{background-color: #324b49;}
+    </style>
+</head>
+<body>
+<div class="main clearfix">
+    <div class="col-xs-3 left_table maxHeight">
+        <div class="col-xs-12 left_top">
+            <table class="table table-striped table-hover">
+                <thead>
+                <tr>
+                    <th>姓名</th>
+                    <!--<th>页数</th>-->
+                </tr>
+                </thead>
+                <tbody id="leftUsersbody">
+                </tbody>
+            </table>
+            <div id="page" class="pageBottom"></div>
+        </div>
+        <div class="col-xs-12 left_bottom">
+            <table class="table table-striped table-hover">
+                <thead>
+                <tr>
+                    <th>图片名称</th>
+                    <!--<th>id</th>-->
+                    <!--<th>分类</th>-->
+                    <!--<th>解读时间</th>-->
+                </tr>
+                </thead>
+                <tbody id="leftImgsbody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="col-xs-6 maxHeight">
+        <div class="center_img_div">
+            <div class="col-xs-12" style="padding: 0 0 8px 0;margin-bottom: 10px;border-bottom: 1px solid #eee">
+                <label id="imgName">测试名称</label>
+                <div style="float: right;">
+                    <div class="slide_rotate_div">
+                        <i class="slide_img slide_xuan" onclick="slideRotate('topImg')"></i>
+                    </div>
+                </div>
+                <div style="float: right;margin-right: 10px;">
+                    <div class="slide_rotate_div">
+                        <i class="slide_img slide_mag"></i>
+                    </div>
+                </div>
+                <div style="float: right;margin-right: 10px;">
+                    <div class="btn_base" onclick="nextImage()">
+                        下一张
+                    </div>
+                </div>
+            </div>
+            <div class="center_img">
+                <img src="" class="c_img" id="topImg" rotate="0">
+                <div class="biaoDiv" onmousemove="magnifierMove(event)"></div>
+                <div class="magnifier" onmousemove="magnifierMove(event)" style="z-index: 110">
+                    <img id="magnifier_img" src="" style="position: absolute;">
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xs-3 maxHeight">
+        <div class="col-xs-12">
+            <table class="table table-striped table-hover">
+                <thead>
+                <tr>
+                    <!--<th>姓名</th>-->
+                    <th>内容</th>
+                </tr>
+                </thead>
+                <tbody id="rightContentbody">
+                </tbody>
+            </table>
+            <!--分页-->
+        </div>
+    </div>
+</div>
+<div class="loader" style="display: none">
+    <div class="loader-inner line-scale-pulse-out-rapid">
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+    </div>
+</div>
+<script src="lib/jquery/jquery-3.0.0.min.js"></script>
+<script src="lib/layui/dist/layui.js"></script>
+<script>
+    var base_url = "http://192.168.0.103:8989/";
+    var page = 1, size = 2;
+    var padding = 40;
+    var showImgWidth = 750, showImgHeight = 788;
+    var curImageIndex = 0;
+    getUsersList();
+    function getUsersList() {
+        console.log("请求接口" + page)
+        $('.loader').show();
+        var url = base_url + "report/patientList";
+        http({
+            url: url,
+            type: 'post',
+            dataType: 'json',
+            data: {page: page, size: size},
+            success: function (result) {
+                $('#leftUsersbody').empty();
+                if (result.status == 1) {
+                    var list = result.data.list;
+                    for (var i = 0; i < list.length; i++) {
+                        var str = "<tr><td>" + list[i] + "</td></tr>"
+                        $('#leftUsersbody').append(str);
+                    }
+                    $('#leftUsersbody tr').each(function () {
+                        $(this).click(function () {
+                            var name = $(this).find('td').eq(0).html();
+                            $(this).siblings().removeClass('table_selected');
+                            $(this).addClass('table_selected');
+                            getImagesList(name);
+                        })
+                    })
+                    total = result.data.total;
+                    layui.use(['laypage', 'layer'], function () {
+                        var laypage = layui.laypage;
+                        laypage.render({
+                            elem: 'page',
+                            count: total,
+                            limit: size,
+                            curr: page,
+                            prev: '<',
+                            next: '>',
+                            jump: function (obj, first) {
+                                console.log("page" + obj.curr);
+                                if (page != 1) {
+                                    page = obj.curr;
+                                    getPage();
+                                    console.log("测试一下page")
+                                }
+                            }
+                        })
+                    })
+                }
+                $('.loader').hide();
+            },
+            error: function (result) {
+            }});
+    }
+    function getPage() {
+        getUsersList();
+    }
+    function getImagesList(name) {
+        var url = base_url + "report/reportList"
+       http({
+            url: url,
+            type: 'post',
+            dataType: 'json',
+            data: {reportName: name},
+            success: function (result) {
+                $('#leftImgsbody').empty();
+                if (result.status == 1) {
+                    var list = result.data;
+                    for (var i = 0; i < list.length; i++) {
+                        var str = "<tr name='" + name + "'><td><span class='imgname'>" + list[i] + "</span><div class='btn_base' style='display: inline-block;float: right;margin-top: 3px;'>json</div></td></tr>"
+                        $('#leftImgsbody').append(str);
+                    }
+                    $('#leftImgsbody tr').each(function (index) {
+                        $(this).find('.imgname').click(function () {
+                            var img = $(this).find('td').eq(0).find('.imgname').html();
+                            var name = $(this).attr('name');
+                            getInfoList(name, img);
+                            $(this).siblings().removeClass('table_selected');
+                            $(this).addClass('table_selected');
+                            curImageIndex = index;
+                        })
+//                        $(this).children().find('.btn_base').each(function () {
+//                            $(this).click(function () {
+//                                console.log("ldfaklsdj")
+////                                layui.use(['layer'],function () {
+////                                    var layer = layui.layer;
+////                                    layer.open({
+////                                        type: 1,
+////                                        skin: 'layui-layer-demo', //样式类名
+////                                        closeBtn: 1, //不显示关闭按钮
+////                                        anim: 2,
+////                                        shadeClose: true, //开启遮罩关闭
+////                                        content: '<div style="padding: 10px;">'+JSON.stringify(JSON.parse(jsonstr))+'</div>',
+////                                        area: ['600px', '400px']
+////                                    });
+////                                })
+//                            })
+//                        })
+                    })
+                }
+            },
+            error: function (result) {
+
+            }
+        })
+    }
+    var jsonstr = '';
+    function getInfoList(name, image) {
+        $('#imgName').html(image);
+        var url = base_url + "report/detail"
+       http({
+            url: url,
+            type: 'post',
+            dataType: 'json',
+            data: {reportName: name, detailName: image},
+            success: function (result) {
+                if (result.status == 1) {
+                    $('#rightContentbody').empty();
+                    $('.biaoDiv').empty();
+                    var list = result.data.detail;
+                    var dialog="";
+                    for (var i = 0; i < list.length; i++) {
+                        list[i].id = 'tab' + i;
+                        var str = "<tr><td id='tab" + i + "' x='" + list[i].x + "' y='" + list[i].y + "' w='" + list[i].width + "' h='" + list[i].height + "'>" + list[i].text + "</td></tr>"
+                        $('#rightContentbody').append(str);
+                        dialog += str;
+                    }
+                    $('#topImg').attr('src', base_url + result.data.img);
+                    $('#magnifier_img').attr('src', base_url + result.data.img);
+                    addLine(base_url + result.data.img, list);
+                    $('#rightContentbody tr').each(function () {
+                        $(this).find('td').click(function () {
+                            $(this).parent().siblings().find('td').removeClass('table_selected')
+                            $(this).addClass('table_selected');
+                            var id = $(this).attr('id');
+                            $('.biaoDiv .line').css("border", '1px solid #ff0000');
+                            $('.biaoDiv #' + id).css("border", '2px solid #009688');
+                            $('.biaoDiv .line').removeClass('line_selected');
+                            $('.biaoDiv #' + id).addClass('line_selected');
+                            //滚动效果
+                            var scrollTop = $('.center_img').scrollTop();
+                            var dotop = $('.biaoDiv #'+id).offset().top;
+                            var hei =  $('.center_img').css('height');
+                            hei = parseFloat(hei.substring(0,hei.indexOf('px')))/2;
+                            console.log($('.biaoDiv #'+id).offset().top+"----"+hei);
+                            $('.center_img').animate({
+                                scrollTop:scrollTop + dotop - hei
+                            },1000);
+                        })
+                    })
+                    jsonstr = list;
+                }
+            },
+            error: function (result) {
+            }
+        })
+    }
+    function addLine(imgurl, list) {
+        var img = new Image();
+        img.src = imgurl;
+        img.onload = function () {
+            var img_width = img.width;
+            var img_height = img.height;
+            var xli = img_width / showImgWidth;
+            var realh = img_height / xli;
+            if (realh > showImgHeight) {
+                //会出现滚动
+                realh = realh;
+
+            }
+            var c = $('.center_img_div').outerHeight() - $('.center_img_div').find('.col-xs-12').outerHeight()-30;
+            $('.center_img').css('height',c+"px");
+            $('#topImg').css('height', realh + "px");
+            $('.biaoDiv').css('height', realh + "px");
+            var yli = img_height / realh
+            for (var i = 0; i < list.length; i++) {
+                w = list[i].width / xli + "px";
+                h = list[i].height / yli + "px";
+                x = list[i].x / xli + "px";
+                y = list[i].y / yli + 'px';
+                var line = '<div class="line" id="' + list[i].id + '" style="width: ' + w + ';height: ' + h + ';left:' + x + ';top:' + y + '"></div>';
+                $('.biaoDiv').append(line);
+            }
+        }
+    }
+    function getMaxHeight() {
+        var height = $(window).outerHeight() - padding;
+        $('.maxHeight').css("height", height + "px");
+        showImgHeight = height - $('.center_img_div').find('.col-xs-12').outerHeight()-40;
+        console.log(showImgHeight);
+    }
+    getMaxHeight();
+    $(window).resize(function () {
+        getMaxHeight()
+    })
+    function slideRotate(imgid) {
+        if ($('#' + imgid).attr('rotate') == 0) {
+            $('#' + imgid).attr('rotate', 1)
+            var str = "rotate(180deg)";
+            $('#' + imgid).css("transform", str);
+        } else {
+            $('#' + imgid).attr('rotate', 0)
+            var str = "rotate(0deg)";
+            $('#' + imgid).css("transform", str);
+        }
+        console.log("rotate")
+    }
+    function magnifierMove(event) {
+        var e = event || window.event;
+        startx = e.clientX - $('.center_img').offset().left;
+        starty = e.clientY - $('.center_img').offset().top;
+        console.log("sdfasdfasd")
+        if (startx > 0 && starty > 0 && startx < showImgWidth && starty < showImgHeight) {
+            $(".magnifier").css("display", "block");
+            $(".magnifier").css("left", (startx - 100) + "px");
+            $(".magnifier").css("top", +(starty - 100) + "px");
+            var left = (startx - 100) * 1.5, top = (starty - 100) * 1.5;
+            $("#magnifier_img").css('left', "-" + left + "px");
+            $("#magnifier_img").css('width', showImgWidth * 1.5 + "px");
+            $("#magnifier_img").css('height', showImgHeight * 1.5 + "px");
+            $("#magnifier_img").css("top", "-" + top + "px");
+        } else {
+            $(".magnifier").css("display", "none");
+        }
+    }
+    function nextImage() {
+        curImageIndex = curImageIndex + 1;
+        $('#leftImgsbody tr').eq(curImageIndex).trigger('click');
+    }
+    function http(obj) {
+        $('.loader').show();
+        $.ajax({
+            url: obj.url,
+            type: obj.type,
+            dataType: 'json',
+            data: obj.data,
+            success: function (result) {
+                $('.loader').hide();
+                obj.success(result);
+                if(result.status==-1){
+                    layui.use('layer',function () {
+                       var  layer = layui.layer;
+                       layer.msg(result.msg);
+                    })
+                }
+            },
+            error: function (result) {
+                $('.loader').hide();
+                obj.error(result)
+                layui.use('layer',function () {
+                    var  layer = layui.layer;
+                    layer.msg(result.msg);
+                })
+            }
+        })
+    }
+</script>
+</body>
+</html>
